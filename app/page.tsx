@@ -141,6 +141,7 @@ export default function HomePage() {
             <NavLink href="#features">Features</NavLink>
             <NavLink href="#how-it-works">How it works</NavLink>
             <NavLink href="/pricing">Pricing</NavLink>
+            <NavLink href="/blog">Blog</NavLink>
             <NavLink href="/docs">Docs</NavLink>
           </div>
 
