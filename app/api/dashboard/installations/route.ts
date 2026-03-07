@@ -16,9 +16,7 @@ export async function GET() {
       installation_id: i.installationId,
       account_login:   i.accountLogin,
       account_type:    i.accountType,
-      plan:            i.plan,
       reviews_used:    i.reviewsUsed,
-      reviews_limit:   i.reviewsLimit,
     }))
   )
 }

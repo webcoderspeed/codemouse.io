@@ -1,50 +1,49 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 export interface ReviewResult {
-  summary: string
-  issues: Issue[]
-  positives: string[]
-  verdict: 'approve' | 'request_changes' | 'comment'
+  summary:        string
+  issues:         Issue[]
+  positives:      string[]
+  verdict:        'approve' | 'request_changes' | 'comment'
   reviewMarkdown: string
 }
 
 export interface Issue {
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  type: 'bug' | 'security' | 'performance' | 'style' | 'logic'
-  title: string
+  severity:    'critical' | 'high' | 'medium' | 'low'
+  type:        'bug' | 'security' | 'performance' | 'style' | 'logic'
+  title:       string
   description: string
-  file?: string
-  line?: number
+  file?:       string
+  line?:       number
 }
 
 const SEVERITY_EMOJI: Record<string, string> = {
-  critical: '🔴',
-  high: '🟠',
-  medium: '🟡',
-  low: '🔵',
+  critical: '🔴', high: '🟠', medium: '🟡', low: '🔵',
 }
 
 const TYPE_EMOJI: Record<string, string> = {
-  bug: '🐛',
-  security: '🔒',
-  performance: '⚡',
-  style: '✨',
-  logic: '🧠',
+  bug: '🐛', security: '🔒', performance: '⚡', style: '✨', logic: '🧠',
 }
 
 export async function reviewPullRequest(
-  prTitle: string,
+  prTitle:       string,
   prDescription: string,
-  diff: string,
-  repoName: string
+  diff:          string,
+  repoName:      string,
+  userApiKey:    string   // user's own OpenAI key
 ): Promise<ReviewResult> {
 
-  // Truncate diff to stay within token limits — GPT-4o-mini has 128k ctx
-  const trimmedDiff = diff.length > 60000 ? diff.slice(0, 60000) + '\n\n[...diff truncated for length]' : diff
+  // Use the user's key — fall back to server key if somehow missing
+  const apiKey = userApiKey || process.env.OPENAI_API_KEY || ''
+  if (!apiKey) throw new Error('No OpenAI API key available. Please add your key in Settings.')
 
-  const systemPrompt = `You are CodeMouse 🐭, an expert AI code reviewer. You review GitHub pull request diffs and provide structured, actionable feedback.
+  const openai = new OpenAI({ apiKey })
+
+  const trimmedDiff = diff.length > 60000
+    ? diff.slice(0, 60000) + '\n\n[...diff truncated for length]'
+    : diff
+
+  const systemPrompt = `You are CodeMouse, an expert AI code reviewer. You review GitHub pull request diffs and provide structured, actionable feedback.
 
 Your job:
 1. Identify real bugs, security vulnerabilities, performance problems, and logic errors
@@ -81,19 +80,18 @@ ${trimmedDiff}
 Review this PR thoroughly.`
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
+    model:           'gpt-4o-mini',
+    messages:        [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
+      { role: 'user',   content: userPrompt   },
     ],
-    temperature: 0.2,
+    temperature:     0.2,
     response_format: { type: 'json_object' },
   })
 
-  const raw = response.choices[0].message.content ?? '{}'
+  const raw    = response.choices[0].message.content ?? '{}'
   const parsed = JSON.parse(raw) as ReviewResult
 
-  // Build the markdown comment that gets posted to GitHub
   parsed.reviewMarkdown = buildMarkdownComment(parsed, prTitle)
 
   return parsed
@@ -103,25 +101,23 @@ function buildMarkdownComment(result: ReviewResult, prTitle: string): string {
   const { summary, issues, positives, verdict } = result
 
   const verdictBadge =
-    verdict === 'approve'          ? '✅ **Looks good to merge**' :
-    verdict === 'request_changes'  ? '❌ **Changes requested**' :
-                                      '💬 **Review comments**'
+    verdict === 'approve'         ? '✅ **Looks good to merge**' :
+    verdict === 'request_changes' ? '❌ **Changes requested**'   :
+                                     '💬 **Review comments**'
 
   const criticalCount = issues.filter(i => i.severity === 'critical').length
   const highCount     = issues.filter(i => i.severity === 'high').length
   const otherCount    = issues.filter(i => !['critical', 'high'].includes(i.severity)).length
 
-  let md = `## 🐭 CodeMouse AI Review\n\n`
+  let md = `## CodeMouse AI Review\n\n`
   md += `${verdictBadge}\n\n`
   md += `> ${summary}\n\n`
 
   if (issues.length > 0) {
-    // Stats bar
     md += `| 🔴 Critical | 🟠 High | 🟡 Medium/Low |\n`
     md += `|------------|---------|---------------|\n`
     md += `| ${criticalCount} | ${highCount} | ${otherCount} |\n\n`
 
-    // Group by severity
     const bySeverity = ['critical', 'high', 'medium', 'low'] as const
     for (const sev of bySeverity) {
       const sevIssues = issues.filter(i => i.severity === sev)
@@ -138,15 +134,13 @@ function buildMarkdownComment(result: ReviewResult, prTitle: string): string {
   }
 
   if (positives && positives.length > 0) {
-    md += `### 👏 What you did well\n\n`
-    for (const p of positives) {
-      md += `- ${p}\n`
-    }
+    md += `### What you did well\n\n`
+    for (const p of positives) md += `- ${p}\n`
     md += `\n`
   }
 
   md += `---\n`
-  md += `*Reviewed by [CodeMouse](https://codemouse.io) 🐭 · AI-powered code review · [Configure](https://codemouse.io/dashboard)*`
+  md += `*Reviewed by [CodeMouse](https://codemouse.io) · AI-powered code review · [Configure](https://codemouse.io/settings)*`
 
   return md
 }

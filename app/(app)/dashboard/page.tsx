@@ -34,9 +34,7 @@ async function getDashboardData(userId: string) {
 
   const totalIssues  = issueAgg[0]?.totalIssues ?? 0
   const avgIssues    = issueAgg[0]?.avgIssues ?? 0
-  const proCount     = installations.filter(i => i.plan === 'pro').length
-
-  return { installations, totalReviews, recentReviews, totalIssues, avgIssues, proCount }
+  return { installations, totalReviews, recentReviews, totalIssues, avgIssues }
 }
 
 function VerdictBadge({ verdict }: { verdict: string }) {
@@ -49,7 +47,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   const userId  = (session!.user as any).id
 
-  const { installations, totalReviews, recentReviews, totalIssues, proCount } = await getDashboardData(userId)
+  const { installations, totalReviews, recentReviews, totalIssues } = await getDashboardData(userId)
 
   const githubInstallUrl = `https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG}/installations/new`
 
@@ -88,9 +86,9 @@ export default async function DashboardPage() {
             icon={Bug}
           />
           <MetricCard
-            label="Pro Installations"
-            value={proCount}
-            suffix={`/ ${installations.length}`}
+            label="Total Reviews"
+            value={totalReviews}
+            suffix="all time"
             icon={Zap}
           />
         </div>
@@ -187,40 +185,17 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-border/60">
-                {installations.slice(0, 6).map((inst: any) => {
-                  const pct = inst.plan === 'pro' ? 100 : Math.min(100, Math.round((inst.reviewsUsed / inst.reviewsLimit) * 100))
-                  return (
-                    <div key={inst.installationId} className="px-5 py-3.5 hover:bg-subtle/30 transition-colors">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <GitBranch size={13} className="text-text-muted flex-shrink-0" strokeWidth={1.75} />
-                          <span className="text-sm font-medium text-text-primary truncate">{inst.accountLogin}</span>
-                        </div>
-                        {inst.plan === 'pro'
-                          ? <Badge variant="accent">Pro</Badge>
-                          : <Badge variant="neutral">Free</Badge>
-                        }
+                {installations.slice(0, 6).map((inst: any) => (
+                  <div key={inst.installationId} className="px-5 py-3.5 hover:bg-subtle/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <GitBranch size={13} className="text-text-muted flex-shrink-0" strokeWidth={1.75} />
+                        <span className="text-sm font-medium text-text-primary truncate">{inst.accountLogin}</span>
                       </div>
-                      {inst.plan === 'free' && (
-                        <>
-                          <div className="flex justify-between text-xs text-text-muted mb-1">
-                            <span>{inst.reviewsUsed} / {inst.reviewsLimit} reviews</span>
-                            <span>{pct}%</span>
-                          </div>
-                          <div className="h-1 bg-subtle rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-danger' : pct >= 75 ? 'bg-warning' : 'bg-accent-500'}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </>
-                      )}
-                      {inst.plan === 'pro' && (
-                        <p className="text-xs text-text-muted">{inst.reviewsUsed.toLocaleString()} reviews this month</p>
-                      )}
+                      <span className="text-xs text-text-muted metric-value">{inst.reviewsUsed.toLocaleString()} reviews</span>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
                 {installations.length > 6 && (
                   <div className="px-5 py-3 text-center">
                     <Link href="/repos" className="text-xs text-text-secondary hover:text-accent-400 transition-colors">

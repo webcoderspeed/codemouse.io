@@ -5,20 +5,18 @@ import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, GitPullRequest, BarChart2, Settings,
-  GitBranch, ChevronDown, LogOut, ExternalLink, Bell,
-  CreditCard, Zap,
+  GitBranch, LogOut, Zap,
 } from 'lucide-react'
 
 const NAV = [
-  { label: 'Overview',     href: '/dashboard',   icon: LayoutDashboard },
-  { label: 'Pull Requests', href: '/reviews',     icon: GitPullRequest },
-  { label: 'Repositories', href: '/repos',        icon: GitBranch },
-  { label: 'Analytics',    href: '/analytics',    icon: BarChart2 },
+  { label: 'Overview',      href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Pull Requests', href: '/reviews',   icon: GitPullRequest  },
+  { label: 'Repositories',  href: '/repos',     icon: GitBranch       },
+  { label: 'Analytics',     href: '/analytics', icon: BarChart2       },
 ]
 
 const BOTTOM_NAV = [
-  { label: 'Billing',      href: '/billing',     icon: CreditCard },
-  { label: 'Settings',     href: '/settings',    icon: Settings },
+  { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
 function NavItem({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
