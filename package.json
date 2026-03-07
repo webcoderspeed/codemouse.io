@@ -1,0 +1,40 @@
+{
+  "name": "codemouse-app",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@octokit/auth-app": "^7.1.1",
+    "@octokit/rest": "^20.1.1",
+    "@octokit/webhooks": "^13.3.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.395.0",
+    "mongoose": "^8.5.1",
+    "next": "14.2.5",
+    "next-auth": "^4.24.7",
+    "nodemailer": "^6.9.14",
+    "openai": "^4.52.7",
+    "razorpay": "^2.9.2",
+    "react": "^18",
+    "react-dom": "^18",
+    "recharts": "^2.15.4",
+    "tailwind-merge": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/nodemailer": "^6.4.15",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
