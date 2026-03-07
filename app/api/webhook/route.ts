@@ -7,6 +7,7 @@ import {
   upsertInstallation,
   getInstallation,
   getUserById,
+  getUserActiveApiKey,
 } from '@/lib/db'
 import { sendAppInstalledEmail } from '@/lib/mailer'
 
@@ -71,19 +72,24 @@ export async function POST(req: NextRequest) {
 
     console.log(`[webhook] PR #${prNumber} opened in ${repoFullName}`)
 
-    // ── 4. Get user's OpenAI API key ──────────────────────────────────────
-    const inst = await getInstallation(installationId)
-    const user = inst?.userId ? await getUserById(inst.userId.toString()) : null
-    const userApiKey = (user as any)?.openaiApiKey ?? ''
+    // ── 4. Get user's active API key (multi-provider) ────────────────────
+    const inst    = await getInstallation(installationId)
+    const userId  = inst?.userId?.toString()
+    const keyData = userId ? await getUserActiveApiKey(userId) : null
 
-    if (!userApiKey) {
-      // Post a helpful comment telling the user to add their key
+    if (!keyData) {
+      // Post a helpful comment telling the user to add a key
       const octokit = await getInstallationOctokit(installationId)
       await postPRComment(octokit, owner, repo, prNumber,
-        `## CodeMouse — Setup Required\n\nTo enable AI code reviews, please add your OpenAI API key in your [CodeMouse Settings](https://codemouse.io/settings).\n\nIt only takes 30 seconds — get your key at [platform.openai.com](https://platform.openai.com/api-keys).\n\n*[CodeMouse](https://codemouse.io) · AI-powered code review*`
+        `## CodeMouse — Setup Required\n\n` +
+        `To enable AI code reviews, please add an API key in your [CodeMouse Settings](https://codemouse.io/settings).\n\n` +
+        `Supported providers: **OpenAI**, **Anthropic**, **Google Gemini**, and **Groq** — all free to start.\n\n` +
+        `*[CodeMouse](https://codemouse.io) · AI-powered code review*`
       )
       return NextResponse.json({ ok: true, skipped: 'no api key' })
     }
+
+    const { provider, model, key: userApiKey } = keyData
 
     // ── 5. Fetch diff ─────────────────────────────────────────────────────
     const octokit = await getInstallationOctokit(installationId)
@@ -94,7 +100,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 6. Run AI review with the user's own key ──────────────────────────
-    const review = await reviewPullRequest(prTitle, prDesc, diff, repoFullName, userApiKey)
+    const review = await reviewPullRequest(prTitle, prDesc, diff, repoFullName, userApiKey, provider, model)
 
     // ── 7. Post comment ───────────────────────────────────────────────────
     await postPRComment(octokit, owner, repo, prNumber, review.reviewMarkdown)

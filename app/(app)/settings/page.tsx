@@ -3,11 +3,13 @@ import { authOptions }      from '@/lib/auth'
 import { connectDB }        from '@/lib/mongoose'
 import { User }             from '@/lib/models/User'
 import { Installation }     from '@/lib/models/Installation'
+import { getUserMaskedKeys } from '@/lib/db'
 import { Topbar }           from '@/components/layout/Topbar'
-import { ApiKeyForm }       from '@/components/settings/ApiKeyForm'
+import ApiKeysManager       from '@/components/settings/ApiKeysManager'
+import { DEFAULT_PROVIDER, DEFAULT_MODEL } from '@/lib/providers'
 import {
   User as UserIcon, Github, Shield,
-  ExternalLink, Trash2, LogOut, Key, Zap,
+  ExternalLink, Trash2, LogOut, Zap,
 } from 'lucide-react'
 import mongoose from 'mongoose'
 import Link from 'next/link'
@@ -17,7 +19,8 @@ async function getSettingsData(userId: string) {
   const uid      = new mongoose.Types.ObjectId(userId)
   const user     = await User.findById(uid).lean()
   const installs = await Installation.find({ userId: uid }).sort({ createdAt: -1 }).lean()
-  return { user, installs }
+  const maskedKeys = await getUserMaskedKeys(userId)
+  return { user, installs, maskedKeys }
 }
 
 function SectionHeader({ title, desc }: { title: string; desc?: string }) {
@@ -45,9 +48,12 @@ function SettingRow({ label, desc, children }: {
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
-  const { user, installs } = await getSettingsData((session!.user as any).id)
+  const userId  = (session!.user as any).id
+  const { user, installs, maskedKeys } = await getSettingsData(userId)
 
-  const hasApiKey = !!((user as any)?.openaiApiKey)
+  const activeProvider = (user as any)?.selectedProvider ?? DEFAULT_PROVIDER
+  const activeModel    = (user as any)?.selectedModel    ?? DEFAULT_MODEL
+
   const githubInstallUrl     = `https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG}/installations/new`
   const githubInstallMgmtUrl = `https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG}/installations`
 
@@ -55,49 +61,20 @@ export default async function SettingsPage() {
     <div className="flex flex-col min-h-screen">
       <Topbar title="Settings" subtitle="Manage your account and integrations" />
 
-      <div className="flex-1 p-6 max-w-2xl space-y-6">
+      <div className="flex-1 p-6 max-w-3xl space-y-6">
 
-        {/* ── API Key — MOST IMPORTANT: shown first ── */}
-        <div className="card p-5 border-accent-500/20 bg-gradient-to-b from-accent-subtle/10 to-transparent">
-          <div className="flex items-start gap-3 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center flex-shrink-0">
-              <Key size={16} className="text-accent-400" strokeWidth={1.75} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-text-primary">OpenAI API Key</h2>
-              <p className="text-xs text-text-muted mt-0.5">
-                Required to enable AI code reviews. CodeMouse is free — you only pay OpenAI directly.
-              </p>
-            </div>
-            {!hasApiKey && (
-              <span className="ml-auto flex-shrink-0 px-2 py-0.5 rounded-full bg-warning/10 border border-warning/20 text-xs font-semibold text-warning">
-                Required
-              </span>
-            )}
+        {/* ── AI API Keys — MOST IMPORTANT: shown first ── */}
+        <div className="card p-5">
+          <div className="mb-5">
+            <h2 className="text-sm font-semibold text-text-primary">AI Provider Keys</h2>
+            <p className="text-xs text-text-muted mt-0.5">
+              Add keys for any AI provider. CodeMouse is free — you only pay providers directly for what you use.
+            </p>
           </div>
-
-          <ApiKeyForm hasKey={hasApiKey} />
-
-          {/* How it works */}
-          {!hasApiKey && (
-            <div className="mt-5 space-y-2">
-              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">How to get your key</p>
-              <ol className="space-y-2">
-                {[
-                  <>Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-accent-400 hover:text-accent-300 transition-colors inline-flex items-center gap-0.5">platform.openai.com/api-keys <ExternalLink size={10} strokeWidth={2}/></a></>,
-                  'Click "Create new secret key" and copy it',
-                  'Paste it above and click Save — reviews start immediately',
-                ].map((step, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-xs text-text-muted">
-                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-subtle border border-border flex items-center justify-center text-[10px] font-bold text-text-muted mt-0.5">
-                      {i + 1}
-                    </span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
+          <ApiKeysManager
+            initialKeyStatuses={maskedKeys}
+            initialActiveModel={{ provider: activeProvider, model: activeModel }}
+          />
         </div>
 
         {/* ── Profile ── */}

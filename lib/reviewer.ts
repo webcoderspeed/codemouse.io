@@ -1,4 +1,10 @@
-import OpenAI from 'openai'
+/**
+ * Multi-provider AI reviewer
+ * Supports: OpenAI, Anthropic, Google Gemini (OpenAI-compat), Groq (OpenAI-compat)
+ */
+
+import OpenAI     from 'openai'
+import Anthropic  from '@anthropic-ai/sdk'
 
 export interface ReviewResult {
   summary:        string
@@ -17,33 +23,9 @@ export interface Issue {
   line?:       number
 }
 
-const SEVERITY_EMOJI: Record<string, string> = {
-  critical: '🔴', high: '🟠', medium: '🟡', low: '🔵',
-}
+/* ── Prompt ──────────────────────────────────────────────────────────────── */
 
-const TYPE_EMOJI: Record<string, string> = {
-  bug: '🐛', security: '🔒', performance: '⚡', style: '✨', logic: '🧠',
-}
-
-export async function reviewPullRequest(
-  prTitle:       string,
-  prDescription: string,
-  diff:          string,
-  repoName:      string,
-  userApiKey:    string   // user's own OpenAI key
-): Promise<ReviewResult> {
-
-  // Use the user's key — fall back to server key if somehow missing
-  const apiKey = userApiKey || process.env.OPENAI_API_KEY || ''
-  if (!apiKey) throw new Error('No OpenAI API key available. Please add your key in Settings.')
-
-  const openai = new OpenAI({ apiKey })
-
-  const trimmedDiff = diff.length > 60000
-    ? diff.slice(0, 60000) + '\n\n[...diff truncated for length]'
-    : diff
-
-  const systemPrompt = `You are CodeMouse, an expert AI code reviewer. You review GitHub pull request diffs and provide structured, actionable feedback.
+const SYSTEM_PROMPT = `You are CodeMouse, an expert AI code reviewer. You review GitHub pull request diffs and provide structured, actionable feedback.
 
 Your job:
 1. Identify real bugs, security vulnerabilities, performance problems, and logic errors
@@ -69,35 +51,155 @@ Respond ONLY with a valid JSON object matching this exact schema:
   "positives": ["What the developer did well, as short bullet strings"]
 }`
 
-  const userPrompt = `Repository: ${repoName}
+function buildUserPrompt(prTitle: string, prDesc: string, diff: string, repoName: string): string {
+  const trimmedDiff = diff.length > 60000
+    ? diff.slice(0, 60000) + '\n\n[...diff truncated for length]'
+    : diff
+
+  return `Repository: ${repoName}
 PR Title: ${prTitle}
-PR Description: ${prDescription || 'No description provided'}
+PR Description: ${prDesc || 'No description provided'}
 
 --- DIFF ---
 ${trimmedDiff}
 --- END DIFF ---
 
 Review this PR thoroughly.`
+}
 
+/* ── Provider implementations ───────────────────────────────────────────── */
+
+async function reviewWithOpenAI(
+  userPrompt: string, apiKey: string, model: string
+): Promise<string> {
+  const openai   = new OpenAI({ apiKey })
   const response = await openai.chat.completions.create({
-    model:           'gpt-4o-mini',
+    model,
     messages:        [
-      { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userPrompt   },
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user',   content: userPrompt    },
     ],
     temperature:     0.2,
     response_format: { type: 'json_object' },
   })
+  return response.choices[0].message.content ?? '{}'
+}
 
-  const raw    = response.choices[0].message.content ?? '{}'
-  const parsed = JSON.parse(raw) as ReviewResult
+async function reviewWithAnthropic(
+  userPrompt: string, apiKey: string, model: string
+): Promise<string> {
+  const client   = new Anthropic({ apiKey })
+  const response = await client.messages.create({
+    model,
+    max_tokens: 2048,
+    system:     SYSTEM_PROMPT,
+    messages:   [{ role: 'user', content: userPrompt }],
+  })
+  const block = response.content[0]
+  return block.type === 'text' ? block.text : '{}'
+}
 
-  parsed.reviewMarkdown = buildMarkdownComment(parsed, prTitle)
+async function reviewWithGemini(
+  userPrompt: string, apiKey: string, model: string
+): Promise<string> {
+  // Gemini supports OpenAI-compatible API
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  })
+  const response = await openai.chat.completions.create({
+    model,
+    messages:        [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user',   content: userPrompt    },
+    ],
+    temperature:     0.2,
+    response_format: { type: 'json_object' },
+  })
+  return response.choices[0].message.content ?? '{}'
+}
+
+async function reviewWithGroq(
+  userPrompt: string, apiKey: string, model: string
+): Promise<string> {
+  // Groq is OpenAI-compatible
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: 'https://api.groq.com/openai/v1',
+  })
+  const response = await openai.chat.completions.create({
+    model,
+    messages:    [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user',   content: userPrompt    },
+    ],
+    temperature: 0.2,
+    // Note: Groq doesn't support response_format for all models
+  })
+  return response.choices[0].message.content ?? '{}'
+}
+
+/* ── Main entry point ────────────────────────────────────────────────────── */
+
+export async function reviewPullRequest(
+  prTitle:    string,
+  prDesc:     string,
+  diff:       string,
+  repoName:   string,
+  apiKey:     string,
+  provider:   string,
+  model:      string,
+): Promise<ReviewResult> {
+
+  if (!apiKey) throw new Error('No API key provided.')
+
+  const userPrompt = buildUserPrompt(prTitle, prDesc, diff, repoName)
+
+  let raw: string
+
+  switch (provider) {
+    case 'anthropic':
+      raw = await reviewWithAnthropic(userPrompt, apiKey, model)
+      break
+    case 'gemini':
+      raw = await reviewWithGemini(userPrompt, apiKey, model)
+      break
+    case 'groq':
+      raw = await reviewWithGroq(userPrompt, apiKey, model)
+      break
+    case 'openai':
+    default:
+      raw = await reviewWithOpenAI(userPrompt, apiKey, model)
+      break
+  }
+
+  // Extract JSON even if model wrapped it in markdown code fences
+  const jsonMatch = raw.match(/\{[\s\S]*\}/)
+  const parsed    = JSON.parse(jsonMatch ? jsonMatch[0] : raw) as ReviewResult
+
+  parsed.reviewMarkdown = buildMarkdownComment(parsed, provider, model)
 
   return parsed
 }
 
-function buildMarkdownComment(result: ReviewResult, prTitle: string): string {
+/* ── Markdown comment builder ────────────────────────────────────────────── */
+
+const SEV_EMOJI: Record<string, string> = {
+  critical: '🔴', high: '🟠', medium: '🟡', low: '🔵',
+}
+
+const TYPE_EMOJI: Record<string, string> = {
+  bug: '🐛', security: '🔒', performance: '⚡', style: '✨', logic: '🧠',
+}
+
+const MODEL_LABELS: Record<string, string> = {
+  openai:    'OpenAI',
+  anthropic: 'Anthropic',
+  gemini:    'Gemini',
+  groq:      'Groq',
+}
+
+function buildMarkdownComment(result: ReviewResult, provider: string, model: string): string {
   const { summary, issues, positives, verdict } = result
 
   const verdictBadge =
@@ -105,9 +207,9 @@ function buildMarkdownComment(result: ReviewResult, prTitle: string): string {
     verdict === 'request_changes' ? '❌ **Changes requested**'   :
                                      '💬 **Review comments**'
 
-  const criticalCount = issues.filter(i => i.severity === 'critical').length
-  const highCount     = issues.filter(i => i.severity === 'high').length
-  const otherCount    = issues.filter(i => !['critical', 'high'].includes(i.severity)).length
+  const critical = issues.filter(i => i.severity === 'critical').length
+  const high     = issues.filter(i => i.severity === 'high').length
+  const other    = issues.filter(i => !['critical', 'high'].includes(i.severity)).length
 
   let md = `## CodeMouse AI Review\n\n`
   md += `${verdictBadge}\n\n`
@@ -116,13 +218,12 @@ function buildMarkdownComment(result: ReviewResult, prTitle: string): string {
   if (issues.length > 0) {
     md += `| 🔴 Critical | 🟠 High | 🟡 Medium/Low |\n`
     md += `|------------|---------|---------------|\n`
-    md += `| ${criticalCount} | ${highCount} | ${otherCount} |\n\n`
+    md += `| ${critical} | ${high} | ${other} |\n\n`
 
-    const bySeverity = ['critical', 'high', 'medium', 'low'] as const
-    for (const sev of bySeverity) {
+    for (const sev of ['critical', 'high', 'medium', 'low'] as const) {
       const sevIssues = issues.filter(i => i.severity === sev)
-      if (sevIssues.length === 0) continue
-      md += `### ${SEVERITY_EMOJI[sev]} ${sev.charAt(0).toUpperCase() + sev.slice(1)} Issues\n\n`
+      if (!sevIssues.length) continue
+      md += `### ${SEV_EMOJI[sev]} ${sev.charAt(0).toUpperCase() + sev.slice(1)} Issues\n\n`
       for (const issue of sevIssues) {
         md += `**${TYPE_EMOJI[issue.type] ?? '•'} ${issue.title}**`
         if (issue.file) md += ` — \`${issue.file}\`${issue.line ? `:${issue.line}` : ''}`
@@ -133,14 +234,15 @@ function buildMarkdownComment(result: ReviewResult, prTitle: string): string {
     md += `### ✅ No issues found\n\nGreat work — this PR looks clean!\n\n`
   }
 
-  if (positives && positives.length > 0) {
+  if (positives?.length) {
     md += `### What you did well\n\n`
     for (const p of positives) md += `- ${p}\n`
     md += `\n`
   }
 
+  const label = MODEL_LABELS[provider] ?? provider
   md += `---\n`
-  md += `*Reviewed by [CodeMouse](https://codemouse.io) · AI-powered code review · [Configure](https://codemouse.io/settings)*`
+  md += `*Reviewed by [CodeMouse](https://codemouse.io) · ${label} ${model} · [Configure](https://codemouse.io/settings)*`
 
   return md
 }
