@@ -2,7 +2,6 @@
   "name": "codemouse-app",
   "version": "0.2.0",
   "private": true,
-  "packageManager": "pnpm@9.1.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -23,7 +22,6 @@
     "next-auth": "^4.24.7",
     "nodemailer": "^6.9.14",
     "openai": "^4.52.7",
-    "razorpay": "^2.9.2",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.15.4",
