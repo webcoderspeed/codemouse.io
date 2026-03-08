@@ -814,6 +814,604 @@ export const BLOG_POSTS: BlogPost[] = [
 <p>Migrating from an OAuth App to a GitHub App after you've built on the OAuth model is non-trivial. The permission model is different, the token handling is different, and the installation UX is different. The users who've authorized your OAuth App need to install your GitHub App as a separate step. If you're starting a new GitHub integration, the decision to start with a GitHub App is low-cost. Revisiting it later is not.</p>
     `,
   },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 24. How to write better PR descriptions
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'pull-request-descriptions-that-get-reviewed',
+    title:    'How to Write Pull Request Descriptions That Actually Get Reviewed',
+    subtitle: 'The single highest-leverage change most engineers can make to their code review experience costs nothing and takes five minutes. They just have to know what to write.',
+    date:     'April 9, 2024',
+    readTime: '7 min read',
+    category: 'Engineering',
+    excerpt:  'A bad PR description turns a 20-minute review into a 90-minute archaeology project. A good one hands the reviewer everything they need to evaluate the change in context. Here\'s the template that works.',
+    content: `
+<p>The most common reason code reviews are slow, shallow, or unproductive isn't reviewer laziness or insufficient expertise. It's that the PR description provides so little context that the reviewer has to reconstruct the intent of the change from the code itself — a time-consuming, error-prone process that produces a worse review than would have been possible with adequate context.</p>
+<p>The reviewer's job is to evaluate whether the code correctly solves the problem it was written to solve. If the reviewer doesn't know what problem is being solved, they can only evaluate whether the code looks correct in isolation — which misses an entire category of correctness that depends on intent.</p>
+
+<h2>What Reviewers Actually Need</h2>
+<p>A reviewer approaching a PR needs answers to four questions before they can meaningfully evaluate the code. What problem does this change solve? Why is this the right approach (and what was rejected)? What should reviewers specifically look at? Are there any non-obvious decisions or constraints the reviewer should know about?</p>
+<p>Most PR descriptions answer none of these questions. They describe what the code does — which the reviewer can determine by reading the diff — rather than why the code does what it does, which the reviewer often cannot determine from the diff alone.</p>
+
+<h2>The Template That Works</h2>
+<p>We use a lightweight PR template across all CodeMouse repositories. It has four sections: <strong>Problem</strong> (one sentence: what was broken or missing), <strong>Solution</strong> (two to three sentences: what approach was taken and what was considered and rejected), <strong>Testing</strong> (how was this verified), and <strong>Notes</strong> (anything the reviewer should know that isn't obvious from the code).</p>
+<p>The Notes section is where the highest-value information usually lives: the third-party API limitation that explains the non-obvious workaround, the performance constraint that explains why the obvious approach was rejected, the compliance requirement that explains why a simpler implementation would be wrong. These are the things that look like unexplained complexity in the code and look like essential context in the PR description.</p>
+
+<h2>Screenshots and Before/After for UI Changes</h2>
+<p>For any change that affects a user interface, a before-and-after screenshot in the PR description reduces review time by 40-60% in our measurement. Reviewers don't have to check out the branch and run the application locally to understand the visual change. They can evaluate it in 30 seconds from the PR description. The engineering cost of taking two screenshots is two minutes. The review time saved is significant.</p>
+
+<h2>Links to Context</h2>
+<p>Every PR description should link to the thing that motivated it: the bug report, the feature request, the architectural decision record, the customer support ticket, the monitoring alert. These links serve two purposes: they help the reviewer understand the full context of the change, and they create a permanent connection between the code change and the reason it was made — invaluable for the future engineer who finds this commit in a <code>git blame</code> and wants to understand what it was solving.</p>
+
+<h2>Making It a Team Standard</h2>
+<p>PR description quality is a team standard, not an individual practice. Add a PR template to your repository (<code>.github/pull_request_template.md</code>) with section headers that prompt the author for the right information. Make the template lightweight enough that it doesn't feel like a bureaucratic chore — four prompts that take five minutes to fill out, not a twelve-section form that takes forty-five minutes. Review the quality of PR descriptions during code review, not just the quality of the code. The investment compounds into a culture where authors provide context as a default, and reviewers can engage with intent rather than guessing at it.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 25. CI/CD and code quality
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'cicd-pipeline-code-quality-investment',
+    title:    'Your CI/CD Pipeline Is a Quality Investment. Most Teams Underfund It.',
+    subtitle: 'A slow, flaky CI pipeline isn\'t just an inconvenience — it\'s a direct tax on engineering velocity, review quality, and team morale. Here\'s how the best teams think about CI as infrastructure.',
+    date:     'March 26, 2024',
+    readTime: '9 min read',
+    category: 'Engineering',
+    excerpt:  'Teams that invest in fast, reliable CI pipelines ship higher-quality code with better review outcomes. The ROI calculation is almost always positive — teams just don\'t run it.',
+    content: `
+<p>Here is a number most engineering teams have never calculated: the total annual cost of their CI pipeline wait time. Take the average CI run duration, multiply by the number of runs per engineer per day, multiply by the number of engineers, multiply by working days per year, and then by the fully-loaded hourly cost of an engineer. For a 50-engineer team with 20-minute CI runs and three runs per day, the annual wait cost exceeds $2 million in direct engineering time — and that's before accounting for the context-switching cost of engineers who do other work while waiting and then have to context-switch back.</p>
+<p>Most teams that run this calculation are surprised by the number. Then they look at how much they've invested in CI infrastructure and the gap is obvious.</p>
+
+<h2>What Slow CI Does to Code Review</h2>
+<p>The relationship between CI speed and review quality is direct and underappreciated. When a CI run takes 45 minutes, the review window between PR submission and CI completion is a dead zone: the author can't address feedback until CI completes, the reviewer can't see CI results while reviewing, and the natural momentum of the PR stalls. When CI runs in four minutes, the feedback loop is tight enough that code review feels like a fast, iterative conversation rather than a slow, sequential handoff.</p>
+<p>Flaky CI is even more costly than slow CI in terms of review quality, because it destroys the relationship between "tests pass" and "code is correct." When engineers can't trust CI results, they mentally downgrade the signal from test failures — which means real failures go uninvestigated and the automated quality gate becomes psychological noise rather than a useful signal.</p>
+
+<h2>The Three-Tier Pipeline Model</h2>
+<p>The pipeline model that balances speed and coverage most effectively runs in three tiers with different time targets. Tier one — targeted tests and type checking — runs in under two minutes on every commit and provides the fast feedback loop that keeps review momentum alive. Tier two — full test suite, linting, security scanning — runs in under ten minutes and provides comprehensive coverage before merge. Tier three — integration tests, end-to-end tests, performance benchmarks — runs on a scheduled basis or before deployment rather than on every commit, keeping the merge path fast without sacrificing coverage.</p>
+<p>The key insight is that not every check needs to block every commit. Tiering by speed and by when the check's signal is actionable reduces the average time-to-merge feedback significantly while maintaining the same total coverage.</p>
+
+<h2>Parallelization as the First Investment</h2>
+<p>The single highest-ROI CI optimization for most teams is parallelization: running test suites across multiple workers simultaneously rather than sequentially. A test suite that takes 30 minutes on one worker takes roughly four minutes on eight workers. The infrastructure cost of the additional workers is typically a small fraction of the engineering time saved. If your CI pipeline is slow and you haven't exhausted parallelization options, that's where to start.</p>
+
+<h2>Treating Flakiness as a First-Class Bug</h2>
+<p>Flaky tests — tests that pass and fail non-deterministically — should be treated as first-class bugs with the same urgency as production incidents, because their cost is as high: they erode trust in the CI signal, cause engineers to re-run pipelines multiple times per PR, and mask real failures behind noise. Maintaining a flakiness dashboard and committing to a policy of quarantining flaky tests immediately (fixing them within a defined SLA rather than leaving them to accumulate) consistently improves both pipeline reliability and team trust in automated signals.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 26. Over-engineering
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'over-engineering-cost-in-startups',
+    title:    'Over-Engineering Is the Most Socially Accepted Form of Technical Debt',
+    subtitle: 'Under-engineering gets flagged in code review. Over-engineering gets praised. This asymmetry is why early-stage products accumulate layers of abstraction they\'ll never need.',
+    date:     'March 12, 2024',
+    readTime: '8 min read',
+    category: 'Engineering',
+    excerpt:  'Unnecessary complexity is still complexity — it just arrives wearing the clothes of good engineering practice. Here\'s how to spot it, why it\'s so hard to prevent, and what it actually costs.',
+    content: `
+<p>Every experienced engineer has seen both failure modes: the startup codebase where nothing is abstracted and the same logic is copy-pasted seventeen times, and the startup codebase where everything is abstracted into a framework of frameworks that requires understanding six layers of indirection to change a button label. The first failure mode is obvious and gets fixed. The second failure mode gets architecture diagrams and conference talks.</p>
+<p>Over-engineering is technically debt — it increases the cognitive cost of making changes, slows onboarding, and creates accidental dependencies between unrelated parts of the system. But because it signals technical sophistication rather than cutting corners, it rarely gets treated as the problem it is.</p>
+
+<h2>The Most Common Forms</h2>
+<p><strong>Premature generalization.</strong> Building a plugin system before you have two plugins. Creating an abstract factory for an object that has one concrete implementation. Designing a configuration system that supports every deployment model when you only have one. Generalization is valuable when you have two or more concrete cases to generalize. Before that, it's complexity masquerading as flexibility.</p>
+<p><strong>Framework-first thinking.</strong> Reaching for a full framework when a simple function would do. Introducing an event bus to solve a problem that three direct function calls would handle. Adding a state management library to manage three pieces of state. Frameworks are valuable at scale. Before scale, they're cognitive overhead that future engineers have to navigate.</p>
+<p><strong>Optimization before measurement.</strong> Caching values that are read once per session. Denormalizing data structures that are never queried at significant volume. Adding database indices to queries that run twice per day. Optimizations that solve imaginary performance problems add real complexity without adding real value. Measure before optimizing.</p>
+
+<h2>Why Code Review Doesn't Catch It</h2>
+<p>Over-engineering survives code review for a structural reason: it's evaluated against the wrong standard. Reviewers ask "is this code correct and safe?" not "is this code as simple as it could be?" The correctness standard is met — over-engineered code often works perfectly. The simplicity standard isn't applied because there's no culture of explicitly asking whether the complexity is justified.</p>
+<p>The question that catches over-engineering is: "What's the simplest thing that would work here?" When a reviewer asks this question and the answer is significantly simpler than what was proposed, a useful conversation ensues. When this question is never asked, complexity accumulates unremarked.</p>
+
+<h2>The Right Level of Abstraction</h2>
+<p>There's a principle from Kent Beck: make it work, make it right, make it fast — in that order, and only when necessary. A corollary applies to abstraction: write the concrete case first. Write a second concrete case. If the pattern is clear and the abstraction would make both cases simpler, abstract. If not, leave them concrete and wait for the third case.</p>
+<p>This isn't a rule against abstraction — it's a rule against speculative abstraction. The abstractions that aged best in the codebases I've worked in were the ones that emerged from real duplication and solved a demonstrated need. The ones that aged worst were the ones that anticipated a need that never materialized.</p>
+<p>Simplicity is a feature. It's harder to build than complexity and harder to defend in a code review. Build the culture that asks "is this as simple as it needs to be?" before asking "is this sophisticated enough to be proud of?"</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 27. Error handling patterns
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'error-handling-patterns-that-scale',
+    title:    'Error Handling Is Not Exception Handling: The Patterns That Actually Scale',
+    subtitle: 'Most error handling in production codebases is reactive rather than intentional — try/catch blocks that were added after something broke, not designed to make failure modes observable and recoverable.',
+    date:     'February 26, 2024',
+    readTime: '9 min read',
+    category: 'Engineering',
+    excerpt:  'The difference between systems that fail gracefully and systems that fail mysteriously comes down almost entirely to how errors are modeled at design time, not how they\'re handled reactively. Here\'s the design-time framework.',
+    content: `
+<p>Production incidents follow a consistent pattern in most systems: something fails, the error is caught somewhere in the call stack, a generic error message is logged, the system continues operating in an undefined state, and an engineer spends hours reconstructing the failure from insufficient evidence. The cause of the incident was in the code. The duration of the incident was in the error handling — or rather, the absence of intentional error handling.</p>
+<p>The distinction between exception handling and error handling is more than semantic. Exception handling treats errors as exceptional, unexpected events to be caught and suppressed. Error handling treats errors as first-class parts of the system design — expected, modeled, and made observable.</p>
+
+<h2>Model Errors as Values</h2>
+<p>The most impactful shift in error handling philosophy is treating errors as values rather than exceptions — returning them from functions rather than throwing them. A function that can fail should return a result that encodes both the success case and the failure case, forcing the caller to handle both explicitly rather than optionally wrapping the call in a try/catch.</p>
+<p>This pattern is enforced by the type system in Rust (Result) and Haskell (Either), and available as a convention in most other languages. In TypeScript, a simple result type — <code>{ ok: true; value: T } | { ok: false; error: E }</code> — makes error handling visible at every call site and eliminates the category of bugs where errors are silently swallowed by an empty catch block.</p>
+
+<h2>Distinguish Error Classes Explicitly</h2>
+<p>Not all errors are the same, and treating them as the same produces error handling code that can't respond appropriately to different failure modes. The error taxonomy that's most useful distinguishes: <strong>expected failures</strong> (user input validation, network timeouts, rate limits) that should be handled gracefully and returned to the caller; <strong>unexpected failures</strong> (null references, assertion violations, invariant breaches) that indicate a programming error and should crash loudly; and <strong>system failures</strong> (database unavailability, disk full, out of memory) that require operational response rather than code-level handling.</p>
+<p>Expected failures should be explicit in function return types. Unexpected failures should never be caught silently — if you catch an unexpected failure, log everything useful and then rethrow or crash. System failures should be detectable before they cause data corruption and surfaced to monitoring immediately.</p>
+
+<h2>What Gets Logged Determines What Gets Debugged</h2>
+<p>The quality of your error handling is measured at 3 AM during an incident, when the information logged at the time of failure is all you have. A log message that says "Error processing request" tells you nothing. A log message that includes the request identifier, the user identifier, the operation being performed, the specific error code and message from the dependency that failed, and the retry count tells you almost everything you need to reconstruct the failure sequence.</p>
+<p>Log at the boundary where context is richest, not at the boundary where the error is first detected. The error is often detected deep in a call stack where only the immediate context is available. The boundary with the full context — the request handler, the background job, the webhook processor — is where a useful log entry can be created by aggregating the context from the full call chain.</p>
+
+<h2>Error Handling in Code Review</h2>
+<p>A checklist for evaluating error handling in code review: Does every function that can fail make that fact visible in its signature? Are expected failures handled explicitly rather than caught generically? Does every catch block do something specific rather than swallowing the error? Are logged errors rich enough to reconstruct the failure context? Is there a recovery path for transient failures (retries with backoff) distinct from the handling of permanent failures? These questions catch the majority of error handling antipatterns before they become production incidents.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 28. The psychology of code review feedback
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'psychology-of-code-review-feedback',
+    title:    'The Psychology of Code Review Feedback: Why How You Say It Matters as Much as What You Say',
+    subtitle: 'Code review feedback that\'s technically correct but socially clumsy produces defensiveness, erodes trust, and slows the learning it\'s supposed to accelerate. Here\'s the science and the practice.',
+    date:     'February 12, 2024',
+    readTime: '9 min read',
+    category: 'Team & Culture',
+    excerpt:  'Engineers who give the same feedback with different framing produce dramatically different outcomes. Understanding the psychology of feedback is a technical skill as important as understanding the code itself.',
+    content: `
+<p>Two engineers review the same pull request. Both notice the same potential null dereference on line 47. The first writes: "This will throw a NullPointerException if user is not logged in." The second writes: "Line 47 might throw if user is null — do you want to add a guard here, or is user guaranteed to be non-null at this point in the flow?" The code they're reviewing is identical. The outcomes of their reviews are not.</p>
+<p>The first comment creates a mildly adversarial dynamic — the author is implicitly being told they made an obvious mistake. The second comment treats the author as a peer who might have information the reviewer doesn't, opens a dialogue about the design intent, and makes the author feel like a collaborator in the review rather than a subject of it. The author who received the second comment is significantly more likely to engage with the feedback, more likely to share the reasoning behind their choice, and more likely to learn from the exchange.</p>
+
+<h2>The Autonomy Preservation Principle</h2>
+<p>Behavioral research on persuasion consistently shows that people are more receptive to suggestions that preserve their sense of autonomy — their feeling that they're making their own decisions rather than being directed. In code review, this means framing feedback as questions or observations rather than directives, acknowledging that the author may have context the reviewer doesn't, and making suggestions optional when they're genuinely optional.</p>
+<p>The practical implementation: add "nit:" to comments that are stylistic preferences rather than correctness issues. Use "consider" and "might" rather than "should" and "must" for non-blocking suggestions. Ask questions when you're uncertain rather than stating criticisms when you think you know. The precision of your language about how confident you are and how important the issue is saves the author significant effort in prioritizing responses.</p>
+
+<h2>Separating the Code from the Author</h2>
+<p>The most reliably effective framing shift in code review is grammatical: critique the code, not the person. "This function is doing too many things" rather than "you're making this too complicated." "The variable name is ambiguous here" rather than "you're using confusing names." The psychological difference between "this code has a problem" and "you made a mistake" is significant even though the factual content is identical. Professional engineers know this intellectually and still default to person-centered framing under time pressure.</p>
+
+<h2>The Specificity Requirement</h2>
+<p>Vague negative feedback is the most demoralizing kind because it gives the recipient no clear path forward. "This doesn't feel right" or "I'd approach this differently" without specifics leaves the author uncertain what to change and unable to improve in any direction. Every critical comment should meet the specificity test: can the author take a concrete action in response to this feedback? If not, rewrite the comment until they can.</p>
+
+<h2>Positive Feedback Is Technically Useful</h2>
+<p>Code review cultures that only surface problems create an implicit message that good code is invisible. This is demoralizing and produces a specific behavior: authors stop trying novel approaches because the return on risky decisions is asymmetric — the downside (critical feedback) is visible and the upside (no feedback) is invisible. Explicit positive feedback — "this approach to the retry logic is clever" or "this test coverage is thorough" — calibrates the author's model of what's valued and reinforces the practices you want the team to repeat. It's not cheerleading; it's signal.</p>
+
+<h2>What Automated Review Changes</h2>
+<p>One underappreciated benefit of automated code review is that it completely separates the mechanical feedback layer from the interpersonal feedback layer. The automated system handles the comments about null checks, naming conventions, and error handling patterns without any of the social dynamics that make the same feedback fraught when delivered by a senior engineer. Human reviewers can then focus on the substantive design and intent questions where their judgment adds value — and where the quality of the interpersonal interaction matters most.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 29. Engineering metrics that matter
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'engineering-metrics-that-actually-matter',
+    title:    'The Engineering Metrics That Actually Predict Outcomes (And the Ones That Lie)',
+    subtitle: 'Most engineering dashboards measure activity rather than impact. Here\'s the difference — and the metrics that actually predict whether your engineering organization is healthy.',
+    date:     'January 29, 2024',
+    readTime: '10 min read',
+    category: 'SaaS & Growth',
+    excerpt:  'Lines of code, story points, and commit frequency are activity metrics that optimize for looking busy. The four DORA metrics and a handful of quality signals measure what actually matters. Here\'s the practical guide.',
+    content: `
+<p>Engineering metrics are political as much as they are technical. The metrics you track determine what gets optimized, what gets reported to leadership, and what behaviors get rewarded implicitly. Tracking the wrong metrics doesn't just produce misleading dashboards — it produces misaligned incentives that shape engineering culture in ways that take years to undo.</p>
+<p>The history of software engineering is littered with metrics that were optimized into irrelevance: lines of code (which incentivizes verbose code), bug count (which incentivizes not filing bugs), velocity in story points (which incentivizes inflating estimates), and test coverage percentage (which incentivizes writing tests that execute code without asserting anything meaningful). Each of these metrics looks reasonable in isolation and produces perverse outcomes when optimized.</p>
+
+<h2>The DORA Metrics: The Best Available Framework</h2>
+<p>The DevOps Research and Assessment metrics — deployment frequency, lead time for changes, change failure rate, and time to restore service — represent the most robustly validated framework for measuring software delivery performance. They're based on years of empirical research across thousands of engineering organizations and are predictive of both business outcomes and organizational health in ways that most engineering metrics aren't.</p>
+<p><strong>Deployment frequency</strong> measures how often code reaches production. High-performing teams deploy multiple times per day. Low-performing teams deploy monthly or quarterly. The correlation between deployment frequency and code quality is counterintuitive but consistent: teams that deploy more frequently have lower change failure rates, because small frequent changes are easier to review, test, and roll back than large infrequent ones.</p>
+<p><strong>Lead time for changes</strong> measures the time from commit to production. This is the aggregate of every quality gate, review cycle, and approval process in your pipeline. Long lead times indicate either slow processes or insufficient automation. The best teams achieve lead times of hours rather than days or weeks.</p>
+<p><strong>Change failure rate</strong> measures what fraction of deployments require a hotfix, rollback, or emergency patch. This is the most direct measure of code quality in production. Teams with strong review practices and automated quality gates consistently show change failure rates below 15%. Teams without these practices see rates above 30-45%.</p>
+<p><strong>Time to restore service</strong> measures how long it takes to recover from a production incident. This reflects the quality of observability, incident response processes, and architectural decisions about rollback and failover. The difference between elite and low-performing teams on this metric is often an order of magnitude.</p>
+
+<h2>Code Quality Metrics Worth Tracking</h2>
+<p>Beyond DORA, a handful of code-level metrics provide useful signal. <strong>Escaped defect rate</strong> — the fraction of bugs found in production versus in review or testing — directly measures the effectiveness of your pre-production quality process. <strong>Review cycle time</strong> — how long between PR submission and first substantive feedback — predicts both developer experience and velocity. <strong>Review iteration count</strong> — how many rounds of feedback a PR requires before merge — indicates the quality of PR descriptions and alignment between author and reviewer expectations.</p>
+
+<h2>What Not to Track</h2>
+<p>Never optimize for individual developer productivity metrics — lines written, tickets closed, commits per day. These metrics measure activity and incentivize the behaviors that look productive on a dashboard rather than the behaviors that produce good software. The engineer who spends a week redesigning a brittle subsystem that eliminates a class of production incidents has created more value than an engineer who closes twenty tickets of surface-level feature work — but the first engineer looks unproductive by most individual productivity metrics.</p>
+<p>Engineering is a team sport. Measure the team's outputs — deployment frequency, quality, velocity — not the individual's activity. The team metrics optimize for collaboration and shared ownership. The individual metrics optimize for personal visibility at the expense of collective quality.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 30. TypeScript migration
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'typescript-migration-lessons-production',
+    title:    'Lessons From Migrating 200,000 Lines of JavaScript to TypeScript in Production',
+    subtitle: 'TypeScript migration is a long-term investment with short-term costs that are easy to underestimate. Here\'s what we learned from doing it with a production system and a team that had to keep shipping.',
+    date:     'January 15, 2024',
+    readTime: '10 min read',
+    category: 'Engineering',
+    excerpt:  'TypeScript migrations fail predictably when teams treat them as big-bang rewrites or underestimate the cultural shift required. Here\'s the incremental approach that works — and the mistakes we made along the way.',
+    content: `
+<p>There's a specific moment in the lifecycle of most JavaScript projects where the codebase becomes difficult to work with: the moment when the implicit type contracts between functions become impossible to hold in your head, when refactoring requires touching thirty files to verify nothing breaks, and when onboarding a new engineer takes weeks because the codebase's behavior can only be understood by reading it all. We hit that moment with CodeMouse at about 150,000 lines of JavaScript, and the migration to TypeScript took eight months.</p>
+<p>Here's what we got right, what we got wrong, and the framework we'd use if we were doing it again.</p>
+
+<h2>The Business Case First</h2>
+<p>TypeScript migrations require sustained investment across many sprints, and that investment will be challenged every time a product deadline approaches and the migration work looks optional compared to feature work. Making the migration succeed requires building the business case before the first file is renamed — and the business case needs to speak in terms that non-engineers understand: reduced bug rate in production, faster onboarding for new engineers, reduced time spent investigating type-related production incidents.</p>
+<p>We tracked our pre-migration production bug rate by type category. Type errors — passing the wrong kind of value to a function, accessing a property that might be undefined, misunderstanding what a function returns — accounted for roughly 35% of all production bugs. This number became the anchor for every conversation about migration priority. TypeScript doesn't eliminate all bugs, but it eliminates this entire category reliably.</p>
+
+<h2>The Incremental Strategy: Never Break the Build</h2>
+<p>The migration strategy that fails is the one that creates a separate TypeScript branch and tries to migrate everything before merging. The strategy that works is the one that migrates incrementally, file by file, while the main branch remains shippable at every commit.</p>
+<p>The practical implementation: enable TypeScript with <code>allowJs: true</code> and <code>strict: false</code>. Add TypeScript incrementally to new files and to files being changed for other reasons. Never allocate sprint capacity exclusively to migration — migrate as a side effect of normal feature work. Enable stricter TypeScript settings module by module as the codebase matures.</p>
+<p>This approach is slower than a big-bang migration but produces better outcomes: the team builds TypeScript fluency gradually, the migration doesn't block shipping, and the TypeScript files that are written alongside ongoing feature work tend to be better typed than files migrated mechanically during a dedicated migration sprint.</p>
+
+<h2>The <code>any</code> Tax</h2>
+<p>The fastest path through a TypeScript migration is to type everything as <code>any</code> and call it done. This is the worst possible outcome — a TypeScript codebase with pervasive <code>any</code> usage provides almost none of the safety guarantees that motivated the migration and all of the ceremony of TypeScript without its benefits.</p>
+<p>Treat <code>any</code> as a temporary loan, not a permanent solution. Track <code>any</code> usage in your codebase. Set a policy: no new <code>any</code> usages without a comment explaining why it's necessary and what condition would allow it to be removed. Reduce existing <code>any</code> usages by 20% per quarter until the codebase is clean. The teams that enforce this policy have dramatically better TypeScript codebases than the teams that treat <code>any</code> as a migration tool.</p>
+
+<h2>Code Review Changes During Migration</h2>
+<p>TypeScript migration changes what code review looks for. Reviewers need to develop fluency in TypeScript's type system to evaluate whether types are accurate and meaningful rather than technically valid but semantically loose. A function typed as <code>(data: any) => any</code> satisfies the TypeScript compiler but tells reviewers nothing. A function typed as <code>(data: ReviewPayload) => ReviewResult</code> documents the contract explicitly.</p>
+<p>Build TypeScript-aware patterns into your review culture: expect type exports for all public interfaces, require return types on all exported functions, flag overly broad types as candidates for refinement. The code review culture you build during migration sets the quality standard for the TypeScript codebase you'll maintain for years.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 31. Dependency management
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'dependency-management-security-risk',
+    title:    'Your Dependencies Are Your Attack Surface. Most Teams Don\'t Treat Them That Way.',
+    subtitle: 'The Log4Shell vulnerability affected hundreds of thousands of applications that didn\'t know they were running Log4j. Dependency management is a security practice, not a chore.',
+    date:     'January 1, 2024',
+    readTime: '8 min read',
+    category: 'Security',
+    excerpt:  'Supply chain attacks have made dependency management a front-line security concern. Here\'s how to audit, update, and add dependencies with the security mindset that the threat level actually requires.',
+    content: `
+<p>In December 2021, the Log4Shell vulnerability was disclosed in Apache Log4j, a Java logging library. Within 72 hours, security researchers had identified over 100 million vulnerable instances across the internet. The majority of the affected teams didn't know they were running Log4j — it was a transitive dependency, pulled in by a library they were aware of, which had its own transitive dependency chain leading back to Log4j.</p>
+<p>Log4Shell was extreme in its scope but not unusual in its mechanism: a vulnerability in a widely-used library, propagated through transitive dependency chains, affecting systems whose developers had no direct awareness of the vulnerable component. The attack surface created by your dependencies is real, large, and largely invisible to developers who aren't actively managing it.</p>
+
+<h2>Direct vs. Transitive Dependencies</h2>
+<p>Most developers have reasonable awareness of their direct dependencies — the packages they explicitly install and import. Almost no developers have systematic awareness of their transitive dependencies — the packages their dependencies depend on, and the packages those depend on in turn. A typical Node.js project with 30 direct dependencies might have 500-800 transitive dependencies. This entire dependency tree is your attack surface.</p>
+<p>Tools like <code>npm audit</code>, <code>pip-audit</code>, and Snyk scan the full transitive dependency tree for known vulnerabilities. Running these tools in CI — not just locally, not just occasionally — ensures that newly-disclosed vulnerabilities in your dependency tree are detected before they become production risks.</p>
+
+<h2>The Dependency Addition Review</h2>
+<p>Every new dependency added to a production codebase should go through a deliberate review that asks: Is this dependency necessary, or could the functionality be implemented more simply inline? Is the package actively maintained? What is the package's download count and community health? What are its transitive dependencies, and do any of them have known issues? Does the package have a history of security vulnerabilities?</p>
+<p>This review takes ten minutes and catches two categories of risk: packages that are abandoned and won't receive security updates, and packages that pull in problematic transitive dependencies. The code review of a PR that adds a new dependency should include this review explicitly, documented in the PR description.</p>
+
+<h2>Dependency Pinning vs. Range Specifications</h2>
+<p>The philosophical question of whether to pin exact dependency versions or specify ranges is a genuine tradeoff. Pinned versions give you reproducible builds and protection against unexpected breaking changes in patch updates — but require active work to update. Range specifications give you automatic security patches — but create the risk of automatically pulling in a breaking change or, in the case of supply chain attacks, a maliciously-modified version.</p>
+<p>The current security environment tilts the balance toward pinning for production dependencies, with automated tooling (Dependabot, Renovate) to manage the update workflow. Automated dependency updates give you the security benefit of current versions without the risk of unreviewed automatic updates — the update creates a PR that can be reviewed and tested before merging.</p>
+
+<h2>What Code Review Misses and Automation Catches</h2>
+<p>Vulnerability scanning, license compliance checking, and transitive dependency analysis are all better handled by automated tools than by human reviewers. Human reviewers can evaluate whether a dependency is appropriate for the use case and whether it's well-maintained — but they can't efficiently identify that a specific version of a transitive dependency has a CVE published this week. Build the automation. Train reviewers to look for what the automation can't check. The combination covers the dependency security surface more completely than either approach alone.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 32. Debugging production systematically
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'debugging-production-issues-systematically',
+    title:    'The Systematic Approach to Production Debugging That Cuts Incident Time in Half',
+    subtitle: 'Most production debugging is ad hoc, inefficient, and relies on the institutional knowledge of whoever is on call. The teams that resolve incidents fastest have a system, not just talented individuals.',
+    date:     'December 17, 2023',
+    readTime: '9 min read',
+    category: 'Engineering',
+    excerpt:  'Brilliant debugging is often a sign of poor tooling. The teams that debug production fastest don\'t have the best debuggers — they have the best observability infrastructure. Here\'s how to build it.',
+    content: `
+<p>There's a type of engineer every team celebrates: the one who can look at a cryptic error log, make a few intuitive leaps, and identify the root cause of a production incident in twenty minutes while everyone else is still orienting. This engineer is genuinely talented and genuinely valuable — and their existence is also a sign that your organization has invested more in finding the right person than in building the right infrastructure.</p>
+<p>Teams that resolve incidents fast don't rely on brilliant individuals. They rely on observability systems that make the right information available to any engineer, and debugging protocols that guide investigation systematically rather than intuitively.</p>
+
+<h2>The Three Pillars of Debuggable Systems</h2>
+<p><strong>Logs that contain context.</strong> A log entry that contains the request ID, user ID, operation name, duration, and specific error code from every failing dependency call is a debugging artifact. A log entry that says "Error: connection refused" is noise. The decision about what to log is made when the code is written, not when the incident happens. Code review should evaluate logging quality as part of standard review.</p>
+<p><strong>Metrics that are pre-aggregated.</strong> When an incident starts, you need to know immediately whether the problem is in database latency, external API calls, internal processing time, or request volume. Pre-aggregated metrics on these dimensions — already graphed in a dashboard, already alerting at configured thresholds — turn the initial "what is happening" phase of an incident from a 30-minute investigation into a 3-minute orientation. The investment in instrumenting these metrics is made once. The benefit is paid on every incident forever.</p>
+<p><strong>Traces that follow requests.</strong> Distributed tracing — assigning a trace ID to each request and propagating it through every service and dependency call — makes it possible to reconstruct the full execution path of a failing request. Without distributed tracing, debugging a microservices incident means correlating logs across multiple services by timestamp, which is slow, error-prone, and impossible when services are on different clock rates. With distributed tracing, the full request path is a single query away.</p>
+
+<h2>The Debugging Protocol</h2>
+<p>Ad hoc debugging starts from symptoms and proceeds by intuition. Systematic debugging starts from symptoms and proceeds by eliminating hypotheses. The protocol: define the symptom precisely (what is failing, at what rate, for what users). Generate a ranked list of hypotheses ordered by likelihood and testability. Test the most likely and most easily testable hypothesis first. Eliminate it or confirm it before moving to the next. Document each step.</p>
+<p>The discipline of documenting each step is the most resisted and most valuable part. During a stressful incident, documentation feels like overhead. It produces two benefits that justify the overhead: it prevents double-testing hypotheses that were already eliminated, and it creates the investigation record that makes the post-incident analysis dramatically easier.</p>
+
+<h2>Coding for Debuggability</h2>
+<p>The best time to make a system debuggable is when the code is being written, not when the incident is happening. Coding practices that improve debuggability: use correlation IDs at every system boundary, log entry and exit points for all external calls with durations, never swallow exceptions without logging full context, and make the "current state" of important system components observable through a health endpoint or admin tool. These practices make the code slightly more verbose. They make incidents significantly shorter.</p>
+<p>Code review is the point where debuggability should be evaluated. A useful review question: if this code fails in production at 3 AM, will the on-call engineer be able to understand what went wrong from the logs and metrics that will be available? If the answer is no, the code isn't ready to ship — regardless of whether it passes all the tests.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 33. Rate limiting patterns
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'rate-limiting-implementation-patterns',
+    title:    'Rate Limiting Is Not Optional: The Patterns Every Production API Needs',
+    subtitle: 'Unprotected APIs are vulnerable to abuse, accidental overload, and denial-of-service attacks. Rate limiting is the first line of defense — and most implementations get it wrong in predictable ways.',
+    date:     'December 3, 2023',
+    readTime: '8 min read',
+    category: 'Security',
+    excerpt:  'Rate limiting implementations fall on a spectrum from dangerously naive to unnecessarily complex. Here\'s the right level of sophistication for different API types, and the patterns that catch reviewers\' eyes.',
+    content: `
+<p>The CTO of a payments startup once told me about an engineer at their company who wrote a data export feature over a weekend. The feature worked correctly and was reviewed and merged the following Monday. By Wednesday, a customer had found the endpoint, written a script that called it in a loop, and generated a 400 GB data export that brought down the database for 45 minutes. The export endpoint had no rate limiting. The code review hadn't flagged it. Nobody had thought about it.</p>
+<p>Rate limiting is the category of security controls that engineers consistently underestimate because its absence usually isn't a vulnerability that appears in a security scanner. It's a vulnerability that appears when a motivated user or a misconfigured client decides to use your API faster than you planned for.</p>
+
+<h2>What Rate Limiting Actually Protects Against</h2>
+<p>Rate limiting is typically framed as protection against abuse. It also protects against accidents: a client with a bug that makes an API call in a tight loop, a data import that calls your API for every row in a million-row file, a misconfigured retry policy that treats every error as a reason to retry immediately. These aren't malicious but their impact on your infrastructure is identical to a deliberate attack. Rate limiting protects your system from all of these regardless of the intent behind the traffic.</p>
+
+<h2>The Token Bucket Algorithm</h2>
+<p>The most commonly misimplemented rate limiting approach is the fixed window algorithm: allow N requests per time window, reject everything above the threshold. The problem with fixed windows is the boundary burst: a client who exhausts their limit at the end of one window and makes the same number of requests at the start of the next window sends 2N requests in a short interval without violating any rate limit check.</p>
+<p>The token bucket algorithm solves this: clients accumulate tokens at a fixed rate up to a maximum bucket size, and each request consumes a token. A client who waits can make burst requests up to the bucket size. A client who calls continuously is limited to the refill rate. This more accurately models the intent of rate limiting — allowing occasional bursts while preventing sustained high-rate access — and avoids the boundary burst problem.</p>
+
+<h2>Granularity: Per-IP, Per-User, Per-Key</h2>
+<p>The right rate limiting granularity depends on what you're protecting and who you're protecting it from. Per-IP rate limiting protects against simple scripts and misconfigured clients but is trivially bypassed by anyone with multiple IP addresses. Per-user rate limiting is more robust for authenticated endpoints — it limits the rate at which an authenticated user can access resources, regardless of which IP they're using. Per-API-key rate limiting is appropriate for public APIs where different clients should have different limits based on their tier or intended use.</p>
+<p>Most production APIs need multiple layers: per-IP for unauthenticated endpoints (login, password reset, public data), per-user for authenticated resource endpoints, and per-key for API integrations. These aren't alternatives — they're complements that protect against different attack surfaces.</p>
+
+<h2>What Code Review Should Check</h2>
+<p>A code review checklist for new API endpoints: Does this endpoint have rate limiting? Is the rate limit applied at the right granularity (per-IP for public, per-user for authenticated)? Is the rate limit implemented in a distributed-safe way (using Redis or a similar shared store rather than in-memory state that doesn't survive restarts or scale horizontally)? Does the response include rate limit headers so clients can implement backoff? Does the 429 response include a Retry-After header so clients know when to try again? These questions take two minutes to check and catch the category of rate limiting omissions that lead to weekend incidents.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 34. Documentation as code
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'documentation-as-code-practice',
+    title:    'Documentation That Doesn\'t Rot: The Practice of Treating Docs as Code',
+    subtitle: 'Documentation that lives outside the codebase becomes outdated the moment the code changes. The teams that maintain accurate documentation have a structural answer to this problem, not a discipline answer.',
+    date:     'November 19, 2023',
+    readTime: '8 min read',
+    category: 'Engineering',
+    excerpt:  'Outdated documentation is worse than no documentation — it actively misleads engineers. The docs-as-code practice keeps documentation accurate by treating it with the same process discipline as code itself.',
+    content: `
+<p>There's a documentation anti-pattern so common it's almost universal: the README that describes how to set up the project based on how it was set up in 2021, the API documentation that describes the response format before the refactor last spring, the architecture diagram that shows the microservices decomposition before the consolidation. Engineers learn quickly not to trust documentation in most codebases, and that learned distrust means they don't read it even when it's accurate — which further reduces the motivation to keep it accurate.</p>
+<p>This is a structural problem, not a discipline problem. Documentation that lives in a wiki or a separate repository is decoupled from the code it describes. When the code changes, updating the documentation is a separate step that requires remembering it exists, finding the right place to update it, and allocating time that's never on the critical path. The documentation drifts. The documentation becomes unreliable. The documentation becomes unused.</p>
+
+<h2>Documentation That Lives With the Code</h2>
+<p>The structural solution is docs-as-code: documentation that lives in the same repository as the code it describes, reviewed in the same pull request, and updated as a required part of any change that affects documented behavior. This doesn't mean all documentation lives in code comments — it means that the process for changing documentation is the same process as changing code, with the same review requirements and the same versioning.</p>
+<p>When a PR changes the behavior of a public API endpoint, it should include updates to the API documentation file in the same diff. When a PR changes the setup process, it should update the README in the same diff. The code reviewer sees both changes simultaneously and can verify that the documentation accurately reflects the code change. If the documentation isn't updated, the review can block the merge — the same way a missing test blocks a merge in teams with test coverage requirements.</p>
+
+<h2>The Three Types of Documentation Worth Maintaining</h2>
+<p><strong>Reference documentation</strong> describes what exists: API endpoints and their parameters, configuration options and their effects, environment variables and their purpose. This is the documentation that engineers consult when they need to know how to use something. It should be generated from code where possible (OpenAPI specs from annotated routes, TypeDoc from typed function signatures) to make automatic accuracy the default.</p>
+<p><strong>Explanatory documentation</strong> describes why decisions were made: the architecture decision records, the technical design documents, the post-incident analyses. This documentation has a different relationship to code — it doesn't need to be updated when the code changes, because it records historical decisions. But it does need to be created at the time decisions are made, which is the step most teams skip.</p>
+<p><strong>Tutorial documentation</strong> guides someone through accomplishing a specific task: getting the project running locally, deploying to a new environment, implementing a specific integration pattern. This documentation rots fastest because it describes a sequence of actions that must work correctly in order. Testing tutorial documentation regularly — having someone follow it from scratch — is the only reliable way to keep it accurate.</p>
+
+<h2>Making Documentation Review Standard</h2>
+<p>Adding "documentation updated" to your PR template as an explicit checkbox — with a note that applies if the change affects documented behavior — makes documentation updates part of the submission discipline rather than something that gets remembered occasionally. It takes thirty seconds per PR and produces a documentation culture where accuracy is maintained by process rather than by individual heroics.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 35. Microservices vs monolith
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'microservices-vs-monolith-honest-tradeoffs',
+    title:    'Microservices vs. Monolith: The Honest Tradeoff Analysis Nobody Gives You',
+    subtitle: 'The microservices debate is usually framed as a technical question. It\'s actually an organizational question. Understanding the real tradeoffs determines whether microservices help or hurt your team.',
+    date:     'November 5, 2023',
+    readTime: '10 min read',
+    category: 'Engineering',
+    excerpt:  'Most teams adopt microservices because they heard it\'s how Netflix does it. Most teams that adopt microservices before they need them spend the next two years paying the operational overhead. Here\'s the honest framework for making the decision.',
+    content: `
+<p>Amazon Web Services runs on microservices. Shopify runs on a monolith. Basecamp runs on a monolith. Notion ran on a monolith until much later than most people assume. Stack Overflow served millions of developers from a monolith for over a decade. The microservices-versus-monolith question doesn't have a universal answer — it has a context-dependent answer, and the context that matters most has nothing to do with technology.</p>
+
+<h2>The Real Driver: Team Size and Ownership</h2>
+<p>Microservices solve an organizational problem, not a technical one. The core problem they solve is coordination overhead in large engineering organizations: when fifty teams are contributing to a single codebase, deploying that codebase requires coordinating fifty teams, and any team can accidentally break any other team's functionality. Microservices decompose the deployment and responsibility boundary in ways that allow teams to work independently.</p>
+<p>If you don't have the organizational coordination problem — if your engineering team is under 30-40 people, all contributing to a manageable codebase — you don't have the problem that microservices solve. You have the costs of microservices without the benefits: distributed systems complexity, network latency between services, operational overhead of running multiple deployments, and the difficulty of making atomic changes across service boundaries.</p>
+
+<h2>The Costs Nobody Talks About</h2>
+<p>Microservices proponents discuss their benefits extensively. The costs receive less attention but matter more for teams making the decision at early scale.</p>
+<p><strong>Distributed transactions are hard.</strong> Operations that touch multiple services atomically require either careful design to make them unnecessary, two-phase commit protocols (which are complex and slow), or eventual consistency (which is correct but mentally challenging to reason about). In a monolith, a database transaction handles atomicity. In a microservices architecture, you're designing your own distributed transaction protocol, and getting it wrong produces data inconsistencies that are difficult to detect and painful to correct.</p>
+<p><strong>Local development is harder.</strong> Running a monolith locally requires one process. Running twenty microservices locally requires twenty processes, their dependencies, inter-service networking, and the orchestration to start them in the right order. Docker Compose helps. It doesn't fully solve the problem. Engineers who can develop and test efficiently in a monolith often can't iterate as fast in a microservices environment.</p>
+<p><strong>Code review across service boundaries is awkward.</strong> When a feature spans three services, the review involves three PRs, each owned by potentially different teams, with dependencies that may not be obvious from any individual PR. Reviewers who could evaluate the complete feature in a monolith are evaluating fragments in a microservices architecture.</p>
+
+<h2>The Right Decomposition Point</h2>
+<p>If you're building a monolith today, the right time to extract a service is when a specific component meets two criteria simultaneously: it has a clear ownership boundary (a single team owns it and no other team needs to modify it directly), and it has distinct scaling or deployment requirements (it needs to deploy at a different frequency or scale independently of the rest of the system).</p>
+<p>Until both criteria are met, the component should stay in the monolith. A well-structured monolith with clear internal module boundaries can accommodate significant team and scale growth before the organizational coordination problem becomes the binding constraint. Don't pay the microservices operational tax before you need the microservices organizational benefit.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 36. Logging best practices
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'structured-logging-production-best-practices',
+    title:    'Structured Logging in Production: The Patterns That Make Incidents Solvable',
+    subtitle: 'Most logging is written to make the system appear to be working, not to help engineers understand what\'s happening when it isn\'t. Here\'s the difference — and the logging practices that actually help.',
+    date:     'October 22, 2023',
+    readTime: '7 min read',
+    category: 'Engineering',
+    excerpt:  'The quality of your logging is the quality of your 3 AM incident response. Here\'s how to write logs that tell the story of what went wrong, not just that something did.',
+    content: `
+<p>There is a type of log that engineers write to satisfy the feeling that they're logging things, and a type of log that engineers write because they've been on call and know what information they'll need at 3 AM. The difference between these two types of logs is the difference between incidents that take 20 minutes to resolve and incidents that take four hours.</p>
+<p>Most production logging falls into the first category: log entries that confirm that the system did what it was supposed to do, written while the system was working, by engineers who didn't yet know what would go wrong. The second category requires a different mindset: logging written as if you're leaving a message for the future engineer who needs to understand a failure you haven't experienced yet.</p>
+
+<h2>Structured vs. Unstructured Logs</h2>
+<p>Unstructured log output — human-readable strings like "Processing order 12345 for user john@example.com" — is easy to write and readable in a terminal. It's difficult to query, difficult to aggregate, and impossible to build dashboards from. When you have millions of log lines and need to find all requests that failed for users in a specific region with a specific error code, unstructured logs require regex searches that are slow, fragile, and can't be pre-indexed.</p>
+<p>Structured logging outputs log entries as machine-readable key-value objects — JSON in most implementations. Each field is explicitly named and typed. The trade-off is that structured logs are less readable in a terminal and more readable in a log aggregation tool. At production scale, you're always querying log aggregation tools, never tailing terminals. Structured logging is the right default for production systems.</p>
+
+<h2>The Fields That Matter</h2>
+<p>Every log entry at the INFO level or above should include: a timestamp with millisecond precision, a severity level, a request or trace ID that correlates all log entries for a single user request, the operation name, and the duration for operations that have meaningful duration. Error log entries should additionally include: the full error message and stack trace, the specific identifier of the resource that failed (user ID, order ID, request path), the dependency that failed if the error originated externally, and any retry information if the operation was retried.</p>
+<p>These fields feel like overhead when you're writing the code. They feel like lifelines when you're debugging an incident and every piece of context is available in the log rather than requiring a database query to reconstruct.</p>
+
+<h2>The PII Problem</h2>
+<p>Logging enough context to debug incidents creates a tension with privacy: the user ID and email address that make a log entry debuggable are personally identifiable information that may have regulatory implications if stored in a logging system. The practical resolution: log user IDs (opaque identifiers) rather than email addresses (direct PII), ensure your logging infrastructure has appropriate retention policies and access controls, and add a log scrubbing step for any fields that might inadvertently contain PII (request bodies, error messages that might echo back user input).</p>
+<p>Code review for logging changes should explicitly check for PII exposure. A log that captures a request body to debug a parsing error might also be capturing a password or credit card number. The rule: log identifiers that refer to sensitive data, never the sensitive data itself.</p>
+
+<h2>What Reviewers Should Check</h2>
+<p>When reviewing code that touches logging: Are structured fields used rather than string concatenation? Does every error log include enough context to identify what operation failed and for which user or resource? Are there any log entries that might capture PII? Are log levels used appropriately (DEBUG for verbose development information, INFO for significant operational events, WARN for recoverable unexpected conditions, ERROR for failures that require attention)? Logs are too important to production operations to skip in review.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 37. Incident response playbooks
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'incident-response-playbooks-engineering',
+    title:    'Incident Response Playbooks: How the Best Engineering Teams Turn Chaos Into Process',
+    subtitle: 'The teams that resolve production incidents fastest aren\'t the ones with the most experienced engineers on call. They\'re the ones who\'ve converted their most experienced engineers\' knowledge into documented playbooks.',
+    date:     'October 8, 2023',
+    readTime: '9 min read',
+    category: 'Engineering',
+    excerpt:  'Institutional knowledge that lives in people\'s heads is unavailable at 3 AM when those people aren\'t on call. Incident response playbooks make that knowledge available to everyone, at any hour, without a phone call.',
+    content: `
+<p>In most engineering organizations, incident response follows an unspoken protocol: page the on-call engineer, and if the on-call engineer can't resolve it within thirty minutes, escalate to whoever has resolved similar incidents before. This protocol works when the right people are available and fails when they aren't. The escalation chain is a dependency graph of institutional knowledge, and any node in that graph going on vacation, leaving the company, or simply being asleep in a different timezone is a potential failure.</p>
+<p>Incident response playbooks convert institutional knowledge into documented process. When the engineer who knows how to handle a database failover is unavailable, the playbook provides a sequence of steps that a less experienced engineer can follow and that produce the right outcome. The knowledge is no longer in a person — it's in a document.</p>
+
+<h2>What a Good Playbook Contains</h2>
+<p>A useful incident response playbook has six components. <strong>Trigger conditions</strong> describe what alert or symptom indicates this playbook applies — specific enough that an engineer can match symptoms to playbook without ambiguity. <strong>Impact assessment</strong> describes the user-facing or business impact of the incident type, which helps the responder communicate status accurately and make triage decisions. <strong>Diagnostic steps</strong> provide a specific sequence of commands or dashboard checks to determine the root cause, with expected outputs at each step and how to interpret them. <strong>Resolution steps</strong> provide the specific actions to take for the most common root causes, again with expected outcomes. <strong>Escalation criteria</strong> describe conditions under which the responder should wake up a more senior engineer or expand the incident scope. <strong>Post-incident actions</strong> describe what to do after resolution: what to document, what to monitor, what follow-up work to schedule.</p>
+
+<h2>Building the Playbook Library</h2>
+<p>The most efficient time to write an incident playbook is immediately after resolving the incident it covers. The responder has full context, the diagnostic and resolution steps are fresh, and the institutional knowledge that was exercised is at its most accessible. Making playbook creation part of the post-incident checklist — a required step in the incident closure process — builds the library incrementally through normal incident operations rather than requiring a dedicated effort.</p>
+<p>Start with the incidents that recur most frequently and the incidents that are most damaging. A library of ten high-quality playbooks covering your most common incidents provides more operational value than fifty playbooks covering every possible scenario.</p>
+
+<h2>Testing Playbooks</h2>
+<p>An untested playbook is a hypothesis. The only way to know whether a playbook produces the intended outcome is to follow it in a non-production environment before it's needed in production. Chaos engineering practices — deliberately introducing failure conditions and following the playbook to recover from them — validate that the playbooks work and build responder confidence and familiarity with the procedures.</p>
+<p>Quarterly gameday exercises where the team simulates incidents and runs through playbooks are one of the highest-return reliability investments available to engineering organizations. They surface gaps in the playbooks, build responder skill, and create the shared experience of responding to incidents together that makes real incidents faster to resolve.</p>
+
+<h2>The Connection to Code Review</h2>
+<p>Code review is where incidents start: the change that introduces the bug that triggers the alert that creates the incident. Code review is also where playbooks should be informed: a change that modifies a system covered by an existing playbook should trigger a review of whether the playbook remains accurate. Making "does this change affect any existing incident playbooks?" an explicit code review consideration — particularly for changes to critical system components — keeps the playbook library accurate as the system evolves.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 38. Database performance in code review
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'database-performance-code-review-patterns',
+    title:    'Database Performance Issues That Hide in Plain Sight During Code Review',
+    subtitle: 'N+1 queries, missing indices, and unbounded result sets look innocuous at small scale and catastrophic at large scale. Here\'s how to spot them in a diff before they reach production.',
+    date:     'September 24, 2023',
+    readTime: '9 min read',
+    category: 'Engineering',
+    excerpt:  'The database query that runs in 3ms against a table with 1,000 rows runs in 12 seconds against a table with 10 million rows. Spotting these performance time bombs in code review requires knowing what patterns to look for.',
+    content: `
+<p>The most common source of production performance incidents in web applications isn't network latency, isn't application code complexity, and isn't infrastructure limitations. It's database queries that weren't written with production data volumes in mind. The query that works fine in development, passes all tests, and survives code review fails in production — not because it's wrong, but because it's wrong at scale.</p>
+<p>Performance issues that are scale-dependent are particularly dangerous because they don't appear until the system is under real load, they often appear suddenly (as the dataset crosses a threshold that changes the query plan), and they're frequently misdiagnosed as infrastructure problems rather than code problems.</p>
+
+<h2>The N+1 Pattern: Still the Most Common Database Bug</h2>
+<p>The N+1 query problem has been a known antipattern for decades and remains one of the most common performance bugs in production systems. The pattern: fetch a list of N records with one query, then execute one additional query for each record to fetch its related data. The result is N+1 database round trips where one round trip (with a JOIN) would suffice.</p>
+<p>In code review, the N+1 pattern appears as a database query inside a loop: an ORM call that's made inside a forEach or map over the result set of a previous query. The fix is usually a single query with a JOIN or an eager-loading configuration. The challenge is recognizing the pattern in ORM code where the query isn't explicit — an ORM that lazy-loads associations will execute the N+1 queries invisibly unless the reviewer knows to look for it.</p>
+
+<h2>Unbounded Queries</h2>
+<p>A query that returns all records from a table without a LIMIT clause is a potential denial-of-service vector against your own database. During development, the table has hundreds of rows and the query returns in milliseconds. In production, the table has millions of rows and the same query tries to load gigabytes of data into memory, exhausts connection pool resources, and degrades performance for every other query running simultaneously.</p>
+<p>Any code review that includes a database query fetching from a collection should ask: what is the upper bound on the number of records this query could return? Is there a LIMIT clause? Is pagination implemented? Queries that operate on unbounded datasets should have explicit safeguards — either a LIMIT, or a documented architectural assumption about maximum dataset size that's validated by monitoring.</p>
+
+<h2>Missing Indices on Filtered Columns</h2>
+<p>A query that filters on a column without an index performs a full table scan: it reads every row in the table to find the matching rows. On small tables, this is fast. On large tables, it's slow. On very large tables, it can take minutes and lock resources that other queries need.</p>
+<p>Code review should check: for every WHERE clause in a new or modified query, does the filtered column have an appropriate index? For queries that filter on multiple columns, is there a composite index in the right column order? This requires reviewers to be aware of the database schema — not just the code. Treating schema migrations as a required part of any PR that introduces new query patterns, and including index creation in those migrations, catches this class of issue before production.</p>
+
+<h2>The Slow Query Review Workflow</h2>
+<p>For any PR that adds or modifies significant database queries, the review workflow should include: reviewing the EXPLAIN/EXPLAIN ANALYZE output for the new query against a representative dataset, checking for N+1 patterns in any ORM code, verifying that LIMIT clauses are present on unbounded queries, and confirming that indices exist on all filtered and joined columns. This adds 15-20 minutes to the review of a data-intensive PR and prevents hours of production incident response.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 39. React performance patterns
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'react-performance-patterns-code-review',
+    title:    'React Performance Antipatterns That Code Review Should Catch',
+    subtitle: 'React performance problems follow predictable patterns — unnecessary re-renders, expensive computations on every render, memory leaks in effects. Here\'s the review checklist that catches them before they ship.',
+    date:     'September 10, 2023',
+    readTime: '8 min read',
+    category: 'Engineering',
+    excerpt:  'Most React performance problems are invisible until they\'re not. A component that renders 12 times per keystroke is fine with 50 items in the list and catastrophic with 5,000. Catching these patterns in code review prevents the production diagnosis.',
+    content: `
+<p>React's component model is intuitive and powerful. It's also easy to write code that works correctly but performs poorly under real usage conditions — particularly conditions like large datasets, frequent state updates, and complex component trees that don't appear in development with seeded data.</p>
+<p>Most React performance problems fall into a small number of recognizable patterns that can be caught in code review. You don't need a profiler to identify them — you need to know what to look for in the diff.</p>
+
+<h2>Unnecessary Re-renders from New Object References</h2>
+<p>React's re-render trigger is reference equality for objects and arrays passed as props. A component that receives an object literal as a prop — <code>&lt;Component config={{ timeout: 5000 }} /&gt;</code> — will re-render every time the parent renders, even if the timeout value never changes, because a new object is created on every render. This is the most common source of unnecessary re-renders and the one most easily caught in review.</p>
+<p>The patterns to flag: object literals and array literals as prop values, inline arrow functions as event handlers for child components, and useEffect dependencies that include object or function references that are recreated on every render. The fixes — moving constants out of render, using useMemo for computed objects, using useCallback for event handlers — are straightforward once the pattern is identified.</p>
+
+<h2>Expensive Computations Without Memoization</h2>
+<p>A computation that filters a 10,000-item array on every render is fast when the array has 100 items and slow when it has 10,000. The change from "fast" to "slow" doesn't happen gradually — it happens as the dataset crosses the threshold where the computation is no longer cheap relative to the frame budget. By that point, the code has been in production for months and the performance problem is attributed to "the dataset getting too large" rather than to an optimization that was always needed.</p>
+<p>Computations that depend on prop or state values that don't change on every render should be memoized with useMemo. The cost of useMemo is the memoization overhead (trivial) and the added code complexity (minimal). The benefit is that the computation only runs when its inputs change rather than on every parent render.</p>
+
+<h2>Memory Leaks in useEffect</h2>
+<p>The most common React memory leak pattern: a useEffect that sets up an event listener, a timer, or a subscription, without returning a cleanup function that removes it when the component unmounts. The effect runs on mount, the resource is allocated, the component unmounts, the resource is never released. Repeat over thousands of component mount/unmount cycles and memory usage climbs indefinitely.</p>
+<p>In code review: every useEffect that creates a resource — addEventListener, setInterval, setTimeout, WebSocket connection, RxJS subscription — should return a cleanup function that releases it. This is documented in the React hooks documentation but missed frequently enough in practice that it should be on every reviewer's checklist.</p>
+
+<h2>List Rendering Without Keys</h2>
+<p>The missing key warning is one of React's most ignored warnings and one of its most important. Without stable, unique keys for list items, React falls back to position-based reconciliation — which causes incorrect behavior when list items are reordered, inserted, or removed. Using the array index as a key solves the warning but not the underlying problem: if items are reordered, React's reconciliation is still incorrect because the keys move with the positions rather than the items.</p>
+<p>Code review for list rendering: does every list item have a key? Is the key a stable identifier from the data (ID, slug, hash) rather than the array index? For lists where items can be reordered, inserted, or removed, array index keys should be flagged explicitly.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 40. Founding engineer to CTO
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'founding-engineer-to-engineering-leader',
+    title:    'The Transition From Founding Engineer to Engineering Leader: What Nobody Tells You',
+    subtitle: 'The skills that make you a great founding engineer — speed, autonomy, technical depth — are different from the skills that make you a great engineering leader. The transition is harder than it looks.',
+    date:     'August 27, 2023',
+    readTime: '11 min read',
+    category: 'Team & Culture',
+    excerpt:  'Most founding engineers who become CTOs struggle with the same transition: from doing to enabling. The ones who make it successfully share specific adaptations. Here\'s what changed for us.',
+    content: `
+<p>For the first two years of building CodeMouse, I wrote code every day. I reviewed every pull request. I was the person who knew the most about every corner of the codebase, the person who made every architectural decision, and the person who got paged when something went wrong at night. This is what founding engineers do. It's appropriate at that scale and it's genuinely satisfying in a way that's hard to replicate later.</p>
+<p>When the team grew past 8-10 engineers, something changed. The work I'd been doing — making every technical decision, reviewing every piece of code — started to become a bottleneck rather than a contribution. Decisions waited for me. Reviews waited for me. The team's velocity was constrained by my availability. I was no longer the fastest path through technical decisions; I was the slowest.</p>
+
+<h2>The Autonomy Transition</h2>
+<p>The founding engineer identity is built around personal competence: I know this system better than anyone, I make better technical decisions than most, and the product is better because I'm deeply involved in its construction. This identity is legitimate and accurate in the early stages. It becomes a liability when the team reaches a size where deep personal involvement in everything is no longer possible.</p>
+<p>The transition that engineering leaders have to make — and it's genuinely hard — is from "I make good decisions" to "I build systems that make good decisions without me." This requires investing in documentation, in code review culture, in architecture decision processes, and in mentorship programs that distribute technical judgment throughout the team rather than concentrating it in a single person. The ROI of this investment is real but deferred, and the investment requires giving up the direct contribution that made the founding engineer feel valuable.</p>
+
+<h2>Letting Go of the Code Review Monopoly</h2>
+<p>One of the hardest specific transitions is giving up review authority. For a founding engineer who has reviewed every PR, the first PR that gets merged without their review produces a specific kind of anxiety: the code might not be up to standard, the architecture might diverge from the intended design, something might ship that I would have caught. This anxiety is real and, at small scale, appropriate. At larger scale, it's a signal that the team hasn't built the review culture that makes distributed review reliable.</p>
+<p>The correct response isn't to continue reviewing everything — that doesn't scale. It's to invest in the systems that make distributed review reliable: well-documented standards, automated review for mechanical issues, structured onboarding for new reviewers, and regular calibration sessions where reviewers discuss how they'd approach specific review scenarios. When these systems are working, the quality of distributed review approaches the quality of centralized review — and the velocity multiplier is enormous.</p>
+
+<h2>The Measurement Shift</h2>
+<p>Founding engineers measure themselves by what they personally build and how good it is. Engineering leaders have to measure themselves by what the team builds collectively and how sustainable the pace is. These are different measurements with different feedback cycles. Personal contribution produces immediate, visible results. Team enablement produces results that are visible in retrospect and easy to attribute to many causes.</p>
+<p>The leaders who make this transition successfully are the ones who find genuine satisfaction in team outcomes — who feel ownership of work they didn't personally write, who take pride in systems that work without them, and who calibrate their own success by the growth and output of the team rather than by their personal technical contribution. This isn't a natural transition for most engineers. It's a deliberate practice that requires building new reward circuits, often with support from other engineering leaders who've made the same transition.</p>
+
+<h2>What Stays the Same</h2>
+<p>The things that make founding engineers effective — high standards, deep technical understanding, bias toward building — remain valuable and important. The engineering leader who has lost touch with the codebase, who can no longer evaluate technical decisions from first principles, who has stopped caring about code quality because they're "not a coder anymore" is a weaker leader than one who remains technically grounded. The goal isn't to stop being an engineer. It's to apply engineering thinking at the level of the organization rather than the level of the function.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 41. The future of code review
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'future-of-code-review-ai-era',
+    title:    'The Future of Code Review in the AI Era: What Changes and What Doesn\'t',
+    subtitle: 'AI is transforming software development faster than most practitioners expected. Code review is being transformed with it — but not in the direction most people assume.',
+    date:     'August 13, 2023',
+    readTime: '10 min read',
+    category: 'AI & Engineering',
+    excerpt:  'The automation of mechanical code review tasks doesn\'t reduce the value of human code review — it elevates it. Here\'s what code review looks like when AI handles everything it\'s good at and humans focus on everything it isn\'t.',
+    content: `
+<p>Three years ago, the question "will AI replace code review" would have seemed premature. Today it's a real strategic question for engineering organizations making decisions about their review processes. The answer, based on what we've seen processing millions of reviews, is more nuanced than either the optimists or the pessimists suggest.</p>
+<p>AI will automate the mechanical layer of code review completely — and has already substantially done so for teams using AI review tools consistently. The substantive layer of code review, which is about as different from the mechanical layer as plumbing is from architecture, will not only survive AI automation but become more important as it becomes the non-automatable part of the review process.</p>
+
+<h2>What AI Review Handles Well Today</h2>
+<p>The mechanical layer of code review — finding null dereferences, flagging security vulnerabilities matching known patterns, identifying N+1 queries, spotting naming inconsistencies, checking error handling completeness — is well-handled by current AI review tools. These patterns are consistent enough across codebases that they can be trained reliably, and frequent enough that automating them provides substantial value.</p>
+<p>Our data shows that AI review catches roughly 65-70% of the issues that experienced human reviewers flag as significant, when evaluated against a held-out set of real production bugs. The remaining 30-35% is the substantive layer: issues that require understanding the intended behavior of the system, the business context of the change, the architectural vision of the codebase, and the non-obvious constraints that the code must satisfy.</p>
+
+<h2>What AI Review Handles Poorly</h2>
+<p>The current generation of AI review tools is systematically poor at three categories of issues. <strong>Intent correctness</strong>: did this code solve the right problem? AI can verify that the code does what it appears to do; it cannot easily verify that what it appears to do is what the product or business needed. <strong>Architectural coherence</strong>: does this change fit into the design of the system, or does it create a pattern that will cause problems as the system evolves? This requires a model of the system's history and trajectory that AI systems don't have access to. <strong>Cross-codebase context</strong>: does this change have implications elsewhere in the codebase that aren't visible in the diff? AI review sees the changed files; it doesn't have efficient access to the full context of how those files interact with the rest of the system.</p>
+
+<h2>The Human Review That Emerges</h2>
+<p>When AI handles the mechanical layer reliably, human review changes character. Reviewers are freed from the exhausting pattern-checking work that occupies most of a typical review and can focus entirely on the substantive questions: Is this solving the right problem? Does this fit the architecture? Are the assumptions correct? Is there a simpler approach? These are the questions that require genuine human understanding and judgment — and they're the questions that produce the most valuable review conversations.</p>
+<p>The emergent model is a three-layer review process: AI handles pattern-level issues immediately and consistently; human review handles intent and architecture; and the author handles the integration between them. This produces reviews that are faster (AI feedback is immediate), more thorough (AI doesn't miss patterns from fatigue), and more substantive (human attention goes to the questions only humans can answer).</p>
+
+<h2>The Skills That Become More Valuable</h2>
+<p>As AI handles more of the mechanical review work, the skills that differentiate excellent reviewers become more specifically human: systems thinking, product judgment, the ability to model how a change will interact with the system's future evolution, and the interpersonal intelligence to deliver substantive feedback in a way that produces learning and collaboration rather than defensiveness. These skills were always the most valuable part of code review. They'll become more obviously so as everything automatable is automated. Invest in developing them deliberately — in yourself and in your team.</p>
+    `,
+  },
+
+  /* ──────────────────────────────────────────────────────────────────────────
+   * 42. Building a developer community
+   * ─────────────────────────────────────────────────────────────────────────*/
+  {
+    slug:     'building-developer-community-around-product',
+    title:    'How to Build a Developer Community That Actually Grows Your Product',
+    subtitle: 'Developer communities that are built as marketing channels fail. Communities that are built as genuine knowledge-sharing ecosystems generate compounding product growth. The difference is architectural.',
+    date:     'July 30, 2023',
+    readTime: '9 min read',
+    category: 'SaaS & Growth',
+    excerpt:  'The most durable developer communities weren\'t built to grow products — they were built to solve real problems, and the product growth was a byproduct. Here\'s how to build something developers actually want to be part of.',
+    content: `
+<p>Every developer tools company eventually faces the community question: should we build a Discord server, a forum, a Slack group, a GitHub Discussions space? The default answer has become "yes" — community is widely understood to drive product growth, retention, and word-of-mouth. The implementation quality varies from transformative to negligible, and the difference is almost always in why the community was built rather than where it was built.</p>
+<p>Developer communities built primarily as marketing channels fail because developers can tell. They walk into a Discord server, see pinned announcements, find that every question either goes unanswered or receives a "great question, here's our docs link," and conclude that the channel exists to broadcast at them rather than to engage with them. They leave, and they don't recommend it.</p>
+
+<h2>The Kernel of a Real Community</h2>
+<p>Real developer communities form around genuine shared problems and genuine knowledge exchange. The kernel isn't a channel — it's a reason to come back. For CodeMouse, the reason is specific: engineers who are trying to get better at code review, who want to understand how AI review works and how to configure it effectively, and who are interested in the broader question of engineering quality practice. This is a real audience with real shared interests. A channel for this audience produces genuine conversations — troubleshooting sessions, configuration questions, debates about review standards — that are valuable independent of the product.</p>
+<p>The test for whether your community has a real kernel: if the product disappeared tomorrow, would anyone continue talking in the channel? If the answer is no, the community is a marketing channel. If the answer is yes — if the conversations have intrinsic value to the people having them — you have the foundation of a real community.</p>
+
+<h2>The Contribution Asymmetry Problem</h2>
+<p>Most developer communities fail to scale past the initial core because of contribution asymmetry: a small number of highly engaged members (usually including company employees) create most of the content, while the majority of members consume passively. When the active contributors burn out or leave, the community dies. Building a community that scales requires solving the contribution problem — creating conditions where many members contribute, not just a few.</p>
+<p>The mechanisms that work: making it easy for members to share their own work and solutions, surfacing member expertise through reputation systems, creating structured onboarding that converts lurkers into participants, and celebrating community contributions publicly. None of these are proprietary insights. They're consistently underimplemented because the company's default instinct is to control the narrative rather than to amplify member voices.</p>
+
+<h2>Community-Informed Product Development</h2>
+<p>The highest-value thing a developer community can do for a product is provide continuous, unsolicited, brutally honest feedback about what works and what doesn't. This only happens if the community trusts that feedback will be heard rather than dismissed — which requires that the company demonstrably act on community feedback, publicly attribute feature decisions to community input, and invite community members into the product development process.</p>
+<p>A product roadmap that's shared openly with the community, that invites community prioritization input, and that transparently explains why specific community requests were deferred rather than implemented generates trust that no amount of marketing achieves. Developers who feel like genuine participants in a product's development become its most credible advocates.</p>
+    `,
+  },
 ]
 
 export function getBlogPost(slug: string): BlogPost | undefined {
